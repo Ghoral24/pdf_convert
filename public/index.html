@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamic PDF Generator - Vinobid</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #d32f2f;
+        --primary-dark: #b71c1c;
+        --bg: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --text: #f8fafc;
+      }
+
+      body {
+        font-family: "Outfit", sans-serif;
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(
+            circle at 20% 20%,
+            rgba(211, 47, 47, 0.15) 0%,
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(30, 41, 59, 0.5) 0%,
+            transparent 40%
+          );
+        color: var(--text);
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        text-align: center;
+        padding: 3rem;
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        max-width: 600px;
+        width: 90%;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #94a3b8;
+        margin-bottom: 2rem;
+      }
+
+      .btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 1rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+      }
+
+      .btn:disabled {
+        background: #475569;
+        cursor: not-allowed;
+      }
+
+      #status {
+        margin-top: 1.5rem;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Vinobid PDF</h1>
+      <p>
+        This version generates the HTML template on the client (or in your real
+        backend) and sends the full string to the PDF service.
+      </p>
+
+      <button id="generateBtn" class="btn">Generate Dynamic PDF</button>
+      <div id="status"></div>
+    </div>
+
+    <script>
+      const generateBtn = document.getElementById("generateBtn");
+      const status = document.getElementById("status");
+
+      // Helper functions for the template
+      const formatString = (val, def = "N/A") => val || def;
+      const formatPrice = (val) =>
+        new Intl.NumberFormat("en-AU", {
+          style: "currency",
+          currency: "AUD",
+        }).format(val || 0);
+      const getCurrentFormattedDate = () =>
+        new Date().toLocaleDateString("en-AU");
+
+      const getTemplate = (data) => {
+        const isBuyer = true;
+        const isMultiple = false;
+        const isPaid = true;
+        const isPayAndShip = true;
+        const isRefund = false;
+
+        // We use absolute URLs for images when sending HTML to server
+        // In real life, these would be hosted on a CDN
+        const logoUrl = window.location.origin + "/logo-dark.svg";
+        const itemImageUrl = window.location.origin + "/bottle_placeholder.png";
+
+        const mapData = data.items;
+        const total_qty = mapData.length;
+        const total_final_price = mapData.reduce(
+          (acc, item) => acc + item.final_price,
+          0,
+        );
+        const total_gst_price = mapData.reduce(
+          (acc, item) => acc + (item.gst_price + item.gst_premium),
+          0,
+        );
+        const total_price_inc_gst = mapData.reduce(
+          (acc, item) => acc + item.total_price,
+          0,
+        );
+        const total_gst_in_price = mapData.reduce(
+          (acc, item) => acc + item.gst_price,
+          0,
+        );
+        const total_buyers_premium = mapData.reduce(
+          (acc, item) => acc + item.premium_amount,
+          0,
+        );
+        const total_gst_in_buyers_premium = mapData.reduce(
+          (acc, item) => acc + item.gst_premium,
+          0,
+        );
+        const total =
+          total_final_price + data.shipping_total + data.insurance_amount;
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; font-weight: 300; font-size: 12px; color: #333; margin: 0; padding: 40px; }
+        .invoice-header { display: flex; align-items: center; background-color: #fcf5f5; padding: 20px; }
+        .invoice-section { display: flex; justify-content: space-between; margin-top: 30px; }
+        .invoice-section-title { font-weight: bold; color: #ac3f3f; margin-bottom: 10px; font-size: 14px; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10px; }
+        .invoice-table th { border-bottom: 2px solid #f4f4f4; padding: 8px; text-align: left; }
+        .invoice-table td { border-bottom: 1px solid #f4f4f4; padding: 8px; }
+        .invoice-summary-box { width: 250px; float: right; margin-top: 30px; background-color: #f9f9f9; padding: 20px; }
+        .invoice-summary-table { width: 100%; }
+        .invoice-summary-table td { padding: 5px 0; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="invoice-header">
+        <img src="${logoUrl}" style="width: 100px; margin-right: 20px;" />
+        <div>
+            <h2 style="margin:0">VINOBID PTY LTD</h2>
+            <p style="margin:0">39 PINE ST, HAWTHORN, VIC, 3122 | ABN: 66 657 703 010</p>
+        </div>
+    </div>
+    <div class="invoice-section">
+        <div>
+            <h3 class="invoice-section-title">BUYER DETAILS</h3>
+            <strong>Customer:</strong> ${data.user_name}<br>
+            <strong>Email:</strong> ${data.email}<br>
+            <strong>Invoice:</strong> INV-${data.invoice}
+        </div>
+        <div class="text-right">
+            <h3 class="invoice-section-title">AUCTION DETAILS</h3>
+            <strong>Auction:</strong> ${data.lots_auction_lot.auction_name}<br>
+            <strong>Date:</strong> ${getCurrentFormattedDate()}
+        </div>
+    </div>
+    <table class="invoice-table">
+        <thead>
+            <tr>
+                <th>IMAGE</th>
+                <th>LOT</th>
+                <th>DESCRIPTION</th>
+                <th>QTY</th>
+                <th>TOTAL (INC GST)</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${mapData
+              .map(
+                (item) => `
+                <tr>
+                    <td><img src="${itemImageUrl}" style="width:30px" /></td>
+                    <td>${item.lot_number}</td>
+                    <td>${item.description}</td>
+                    <td>${item.item_count}</td>
+                    <td>${formatPrice(item.final_price)}</td>
+                </tr>
+            `,
+              )
+              .join("")}
+        </tbody>
+    </table>
+    <div class="invoice-summary-box">
+        <table class="invoice-summary-table">
+            <tr><td>Total (excl. GST)</td><td class="text-right">${formatPrice(total_final_price - total_gst_price)}</td></tr>
+            <tr><td>Total GST</td><td class="text-right">${formatPrice(total_gst_price)}</td></tr>
+            <tr><td>Shipping</td><td class="text-right">${formatPrice(data.shipping_total)}</td></tr>
+            <tr class="bold" style="border-top: 1px solid #ddd"><td>Total (inc. GST)</td><td class="text-right">${formatPrice(total)}</td></tr>
+            <tr class="bold" style="color: #ac3f3f"><td>Balance Owing</td><td class="text-right">$0.00</td></tr>
+        </table>
+    </div>
+</body>
+</html>`;
+      };
+
+      generateBtn.addEventListener("click", async () => {
+        const dummyData = {
+          user_name: "Manish Regmi 10",
+          email: "manish.regmi+10@ebpearls.com",
+          invoice: "9902226",
+          lots_auction_lot: { auction_name: "Special Wine Auction" },
+          items: Array.from({ length: 25 }, (_, i) => ({
+            lot_number: 100 + i,
+            description: `Vintage Red Wine Bottle #${i + 1}`,
+            item_count: 1,
+            gst_price: 0.45,
+            gst_premium: 0.05,
+            total_price: 5.0,
+            premium_amount: 0.5,
+            final_price: 5.5,
+          })),
+          shipping_total: 20.0,
+          insurance_amount: 5.0,
+        };
+
+        const html = getTemplate(dummyData);
+
+        try {
+          generateBtn.disabled = true;
+          status.textContent = "Sending HTML to server...";
+
+          const response = await fetch("/generate-pdf", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": "rnd_mbsLLTilFD0Ad0P8V4Eghz4A2euU",
+            },
+            body: JSON.stringify({
+              html: html,
+              filename: `Invoice_${dummyData.invoice}`,
+            }),
+          });
+
+          if (!response.ok) throw new Error("Generation failed");
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `Invoice_${dummyData.invoice}.pdf`;
+          a.click();
+
+          status.textContent = "Success! PDF Generated from API template.";
+          status.style.color = "#10b981";
+        } catch (err) {
+          status.textContent = "Error: " + err.message;
+          status.style.color = "#ef4444";
+        } finally {
+          generateBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
