@@ -8,7 +8,13 @@ const PORT = process.env.PORT || 3001;
 // Increase limit to handle large HTML templates
 app.use(express.json({ limit: "50mb" }));
 app.use(cors());
-app.use(express.static("public"));
+
+// Health check / Root
+app.get("/", (req, res) => {
+  res.send(
+    "PDF Conversion Service is running. Use /generate-pdf to create PDFs.",
+  );
+});
 
 const API_KEY = "rnd_mbsLLTilFD0Ad0P8V4Eghz4A2euU";
 
