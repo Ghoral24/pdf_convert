@@ -16,18 +16,7 @@ app.get("/", (req, res) => {
   );
 });
 
-const API_KEY = "rnd_mbsLLTilFD0Ad0P8V4Eghz4A2euU";
-
-// Middleware to check API key
-const authenticate = (req, res, next) => {
-  const apiKey = req.headers["x-api-key"];
-  if (apiKey !== API_KEY) {
-    return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
-  }
-  next();
-};
-
-app.post("/generate-pdf", authenticate, async (req, res) => {
+app.post("/generate-pdf", async (req, res) => {
   const { html, filename } = req.body;
 
   if (!html) {
